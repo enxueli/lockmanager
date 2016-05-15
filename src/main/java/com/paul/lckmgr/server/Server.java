@@ -43,7 +43,7 @@ public class Server {
     }
 
     /**
-     * 创建非阻塞服务器绑定5555端口
+     * Create non-blocking io server
      */
     public Server() {
         try {
@@ -65,7 +65,7 @@ public class Server {
     }
 
     /**
-     * 关闭服务器
+     * close server
      */
     private void close() {
         run = false;
@@ -84,7 +84,7 @@ public class Server {
     }
 
     /**
-     * 启动选择器监听客户端事件
+     * start selector and listen socket event
      */
     private void start() {
         threadPool.execute(new Runnable() {
@@ -151,7 +151,7 @@ public class Server {
     }
 
     /**
-     * 响应数据给客户端线程
+     * response client
      */
     private class WriteClientSocketHandler implements Runnable {
         SocketChannel client;
@@ -174,13 +174,12 @@ public class Server {
                 responseByteData = logResponseString.getBytes();
             }
             if (responseByteData == null || responseByteData.length == 0) {
-                System.out.println("响应的数据为空");
+                System.out.println("no data");
                 return;
             }
             try {
                 client.write(ByteBuffer.wrap(responseByteData));
-                System.out.println("server响应客户端[" + client.keyFor(selector).hashCode() + "]数据 :[" + logResponseString
-                        + "]");
+                System.out.println("server's response to client:" + client.keyFor(selector).hashCode() + ":" + logResponseString);
             } catch (IOException e) {
                 e.printStackTrace();
                 try {
@@ -201,7 +200,7 @@ public class Server {
     }
 
     /**
-     * 读客户端发送数据线程
+     * read client data
      */
     private class ReadClientSocketHandler implements Runnable {
         private SocketChannel client;
@@ -230,7 +229,7 @@ public class Server {
                     return;
                 }
                 String readData = new String(data);
-                System.out.println("接收到客户端[" + hashCode + "]数据 :[" + readData.substring(0, 3) + "]");
+                System.out.println("received data" + hashCode + ":" + readData.substring(0, 3));
                 // dosomthing
                 byte[] response = ("response" + readData.substring(0, 3)).getBytes();
                 List<Object> list = responseMessageQueue.get(hashCode);
@@ -238,7 +237,7 @@ public class Server {
                 client.register(selector, SelectionKey.OP_WRITE);
                 // client.register(selector, SelectionKey.OP_WRITE, response);
             } catch (IOException e) {
-                System.out.println("客户端[" + selectionKey.hashCode() + "]关闭了连接");
+                System.out.println("client" + selectionKey.hashCode() + "close the connection");
                 try {
                     SelectionKey selectionKey = client.keyFor(selector);
                     if (selectionKey != null) {

@@ -1,6 +1,7 @@
 package com.paul.lckmgr.client;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -46,7 +47,7 @@ public class Client {
         try {
             client = SocketChannel.open();
             client.configureBlocking(false);
-            client.connect(new InetSocketAddress("192.168.57.1", 5555));
+            client.connect(new InetSocketAddress(InetAddress.getLocalHost(), 5555));
             client.register(selctor, SelectionKey.OP_CONNECT);
         } catch (IOException e) {
             e.printStackTrace();
@@ -94,7 +95,7 @@ public class Client {
                                 if (data.length > 0) {
                                     String receiveData = new String(data);
                                     set.add(receiveData.substring(receiveData.length() - 3));
-                                    System.out.println("客户端接收到数据:[" + new String(data) + "]");
+                                    System.out.println("received data:" + new String(data));
                                 }
                             }
                         }
@@ -128,7 +129,7 @@ public class Client {
                 responseByteData = logResponseString.getBytes();
             }
             if (responseByteData == null || responseByteData.length == 0) {
-                System.out.println("发送数据为空");
+                System.out.println("no data");
                 return;
             }
             try {
@@ -194,32 +195,17 @@ public class Client {
         for (int i = 0; i < 500; i++) {
             String ii = "00" + i;
             ii = ii.substring(ii.length() - 3);
-            client.writeData(ii + "nimddddddddddsssssssssssssssssssssssssssssssssssscccccccccccccccccccccccc"
-                    + "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccdddddddddddd"
-                    + "dddddddddddddddddwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwaaaaaaaaaaaaaa"
-                    + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddddddddddddddddddddddddddddd"
-                    + "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddrrrr"
-                    + "jjjjjjjjjjjjjjjjjjjjjjjjjjjjrrrrrrrrrrrrrrrrrrrrrrrrrrrkkkkkkkkkkkkkkkkkkkk"
-                    + "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkjjjjkkkkkklllllllllllllllllllllllllll"
-                    + "lllllllldddddddddddddmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmddaei"
-                    + "nimddddddddddsssssssssssssssssssssssssssssssssssscccccccccccccccccccccccc"
-                    + "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccdddddddddddd"
-                    + "dddddddddddddddddwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwaaaaaaaaaaaaaa"
-                    + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddddddddddddddddddddddddddddd"
-                    + "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddrrrr"
-                    + "jjjjjjjjjjjjjjjjjjjjjjjjjjjjrrrrrrrrrrrrrrrrrrrrrrrrrrrkkkkkkkkkkkkkkkkkkkk"
-                    + "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkjjjjkkkkkklllllllllllllllllllllllllll"
-                    + "lllllllldddddddddddddmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmddaei" + i);
+            client.writeData(ii + "testing...." + i);
         }
         long t2 = System.currentTimeMillis();
-        System.out.println("总共耗时：" + (t2 - t1) + "ms");
-        System.out.println("总共接收大小" + client.receiveSize());
+        System.out.println("total：" + (t2 - t1) + "ms");
+        System.out.println("data: " + client.receiveSize());
         if (client.receiveSize() < 500) {
             for (int i = 0; i < 500; i++) {
                 String ii = "00" + i;
                 ii = ii.substring(ii.length() - 3);
                 if (!client.hasElement(ii)) {
-                    System.out.println("缺少" + ii);
+                    System.out.println("missing: " + ii);
                 }
             }
         }
