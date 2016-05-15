@@ -14,9 +14,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Created by paul on 5/15/16.
@@ -28,8 +26,7 @@ public class Client {
     private List<Object> messageQueue = new LinkedList<>();
 
     private Set<String> set = new HashSet<String>();
-    private ThreadPoolExecutor threadPool = new ThreadPoolExecutor(3, 5, 200, TimeUnit.MILLISECONDS,
-            new ArrayBlockingQueue<Runnable>(20));
+    private ExecutorService threadPool = Executors.newFixedThreadPool(20);
 
     private boolean isClose = false;
     private volatile boolean run = true;

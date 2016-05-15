@@ -13,10 +13,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Created by paul on 5/15/16.
@@ -25,8 +22,7 @@ public class Server {
 
     private Selector selector = getSelector();
     private ServerSocketChannel ss = null;
-    private ThreadPoolExecutor threadPool = new ThreadPoolExecutor(10, 10, 500, TimeUnit.MILLISECONDS,
-            new ArrayBlockingQueue<Runnable>(20));
+    private ExecutorService threadPool = Executors.newFixedThreadPool(200);
 
     private Map<Integer, SelectionKey> selectionKeyMap = new ConcurrentHashMap<>();
     private Map<Integer, List<Object>> responseMessageQueue = new ConcurrentHashMap<>();
