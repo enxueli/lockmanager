@@ -1,211 +1,126 @@
 package com.paul.lckmgr.client;
 
-import java.io.IOException;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.net.SocketAddress;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.*;
 
 /**
- * Created by paul on 5/15/16.
+ * Created by paul on 5/13/16.
  */
 public class Client {
-    private SocketChannel client;
-    private Selector selctor = getSelector();
+    /**
+     * The client channels and one client can have multiple channels
+     */
+    private EventLoopGroup clientGroup;
 
-    private List<Object> messageQueue = new LinkedList<>();
+    /**
+     * The client channel future
+     */
+    private ChannelFuture channelFuture;
 
-    private Set<String> set = new HashSet<String>();
-    private ExecutorService threadPool = Executors.newFixedThreadPool(20);
+    /**
+     * The server address to connect
+     */
+    private SocketAddress serverAddress;
 
-    private boolean isClose = false;
-    private volatile boolean run = true;
-
-    public Selector getSelector() {
-        try {
-            return Selector.open();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
+    public Client(SocketAddress serverAddress) {
+        this.serverAddress = serverAddress;
     }
 
-    public Client() {
+    /**
+     * Start client
+     */
+    public void start() throws Exception {
+        int clientNumbers = 10;
+
+        // set one channel for a client
+        clientGroup = new NioEventLoopGroup(1);
+
+        // start multiple clients
+        ExecutorService service = Executors.newFixedThreadPool(clientNumbers);
+
         try {
-            client = SocketChannel.open();
-            client.configureBlocking(false);
-            client.connect(new InetSocketAddress(InetAddress.getLocalHost(), 5555));
-            client.register(selctor, SelectionKey.OP_CONNECT);
-        } catch (IOException e) {
-            e.printStackTrace();
-            isClose = true;
-            return;
-        }
-        threadPool.execute(new Runnable() {
-
-            @Override
-            public void run() {
-                while (run) {
-                    try {
-//                        if (selctor.select(20) == 0) {
-//                            continue;
-//                        }
-                        selctor.select();
-                        Iterator<SelectionKey> iterator = selctor.selectedKeys().iterator();
-                        while (iterator.hasNext()) {
-                            SelectionKey selectionKey = iterator.next();
-                            iterator.remove();
-                            if (selectionKey.isConnectable()) {
-                                SocketChannel sc = (SocketChannel) selectionKey.channel();
-                                sc.finishConnect();
-                                sc.register(selctor, SelectionKey.OP_READ);
-                            } else if (selectionKey.isWritable()) {
-                                selectionKey.interestOps(SelectionKey.OP_READ);
-                                SocketChannel writeSocketChannel = (SocketChannel) selectionKey.channel();
-                                Object requestMessage = null;
-                                while (messageQueue.size() > 0) {
-                                    requestMessage = messageQueue.remove(0);
-                                    threadPool
-                                            .execute(new WriteClientSocketHandler(writeSocketChannel, requestMessage));
-
-                                }
-                            } else if (selectionKey.isReadable()) {
-                                SocketChannel readSocketChannel = (SocketChannel) selectionKey.channel();
-                                ByteBuffer tmp = ByteBuffer.allocate(1024);
-                                int len = -1;
-                                byte[] data = new byte[0];
-                                if ((len = readSocketChannel.read(tmp)) > 0) {
-                                    data = Arrays.copyOf(data, data.length + len);
-                                    System.arraycopy(tmp.array(), 0, data, data.length - len, len);
-                                    tmp.rewind();
-                                }
-                                if (data.length > 0) {
-                                    String receiveData = new String(data);
-                                    set.add(receiveData.substring(receiveData.length() - 3));
-                                    System.out.println("received data:" + new String(data));
-                                }
-                            }
+            Bootstrap bootstrap = new Bootstrap()
+                    .group(clientGroup)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel channel) throws Exception {
+                            channel.pipeline()
+                                    .addLast(new ObjectDecoder(ClassResolvers.softCachingConcurrentResolver(Client.class.getClassLoader())))
+                                    .addLast(new ObjectEncoder())
+                                    .addLast(new ClientHandler());
                         }
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
-                        close();
+                    });
+
+            channelFuture = bootstrap.connect(serverAddress).syncUninterruptibly();
+
+            List<Future<Void>> futures = new ArrayList<>(clientNumbers);
+
+            for (int i = 0; i < clientNumbers; i++) {
+                futures.add(service.submit(new Callable<Void>() {
+                    public Void call() {
+                        channelFuture.channel().writeAndFlush("Client data.");
+                        System.out.println("Client output data.");
+                        return null;
                     }
+                }));
+            }
+
+            for (Future<Void> future : futures) {
+                try {
+                    future.get();
                 }
-            }
-        });
-    }
-
-    private class WriteClientSocketHandler implements Runnable {
-        SocketChannel client;
-        Object respnoseMessage;
-
-        WriteClientSocketHandler(SocketChannel client, Object respnoseMessage) {
-            this.client = client;
-            this.respnoseMessage = respnoseMessage;
-        }
-
-        @Override
-        public void run() {
-            byte[] responseByteData = null;
-            String logResponseString = "";
-            if (respnoseMessage instanceof byte[]) {
-                responseByteData = (byte[]) respnoseMessage;
-                logResponseString = new String(responseByteData);
-            } else if (respnoseMessage instanceof String) {
-                logResponseString = (String) respnoseMessage;
-                responseByteData = logResponseString.getBytes();
-            }
-            if (responseByteData == null || responseByteData.length == 0) {
-                System.out.println("no data");
-                return;
-            }
-            try {
-                client.write(ByteBuffer.wrap(responseByteData));
-            } catch (IOException e) {
-                e.printStackTrace();
-                close();
-            }
-        }
-    }
-
-    public boolean isClose() {
-        return isClose;
-    }
-
-    public void close() {
-        try {
-            run = false;
-            isClose = true;
-            selctor.close();
-            client.close();
-            threadPool.shutdown();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void writeData(String data) {
-        try {
-            if (client.isOpen()) {
-                client.register(selctor, SelectionKey.OP_WRITE);
-            }
-        } catch (ClosedChannelException e1) {
-            e1.printStackTrace();
-        }
-        messageQueue.add(data);
-        try {
-            Thread.sleep(40);
-        } catch (InterruptedException e) {
-
-            e.printStackTrace();
-        }
-    }
-
-    public int receiveSize() {
-        return set.size();
-    }
-
-    public boolean hasElement(Object obj) {
-        return set.contains(obj);
-    }
-
-    public static void main(String[] args) {
-
-        Client client = new Client();
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-
-            e.printStackTrace();
-        }
-        long t1 = System.currentTimeMillis();
-        for (int i = 0; i < 500; i++) {
-            String ii = "00" + i;
-            ii = ii.substring(ii.length() - 3);
-            client.writeData(ii + "testing...." + i);
-        }
-        long t2 = System.currentTimeMillis();
-        System.out.println("total：" + (t2 - t1) + "ms");
-        System.out.println("data: " + client.receiveSize());
-        if (client.receiveSize() < 500) {
-            for (int i = 0; i < 500; i++) {
-                String ii = "00" + i;
-                ii = ii.substring(ii.length() - 3);
-                if (!client.hasElement(ii)) {
-                    System.out.println("missing: " + ii);
+                catch (ExecutionException e) {
+                    e.printStackTrace();
                 }
             }
         }
-        client.close();
+        finally {
+            service.shutdownNow();
+        }
+    }
+
+    /**
+     * Stop client
+     */
+    public void stop() {
+        if (channelFuture != null) {
+            channelFuture.channel().close().syncUninterruptibly();
+            channelFuture = null;
+        }
+
+        if (clientGroup != null) {
+            clientGroup.shutdownGracefully();
+            clientGroup = null;
+        }
+
+        System.out.println("client stop.");
+    }
+
+    /**
+     * The input of client
+     * @param args
+     * @throws Exception
+     */
+    public static void main(String[] args) throws Exception {
+        Client client = new Client(new InetSocketAddress(InetAddress.getLocalHost(), 8088));
+        try {
+            client.start();
+        }
+        finally {
+            client.stop();
+        }
     }
 }
