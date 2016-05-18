@@ -25,7 +25,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter implements Lock 
      */
     private final Map<String /*the lock name*/, LinkedList<String> /*the lock holder list*/> waitingHoldersList = new HashMap<>();
 
-    private static final Logger _logger = LogManager.getLogger(ServerHandler.class);
+    private static final Logger _logger = LogManager.getFormatterLogger(ServerHandler.class);
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {

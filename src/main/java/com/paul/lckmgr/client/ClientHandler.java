@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
  * Created by paul on 5/13/16.
  */
 public class ClientHandler extends ChannelInboundHandlerAdapter {
-    private static final Logger _logger = LogManager.getLogger(ClientHandler.class);
+    private static final Logger _logger = LogManager.getFormatterLogger(ClientHandler.class);
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {

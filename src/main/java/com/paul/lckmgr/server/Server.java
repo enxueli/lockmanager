@@ -41,7 +41,7 @@ public class Server {
      */
     private SocketAddress socketAddress;
 
-    private static final Logger _logger = LogManager.getLogger(Server.class);
+    private static final Logger _logger = LogManager.getFormatterLogger(Server.class);
 
     public Server(SocketAddress socketAddress) throws Exception {
         this.socketAddress = socketAddress;

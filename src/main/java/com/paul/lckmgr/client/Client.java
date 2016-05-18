@@ -43,7 +43,7 @@ public class Client {
      */
     private SocketAddress serverAddress;
 
-    private static final Logger _logger = LogManager.getLogger(Client.class);
+    private static final Logger _logger = LogManager.getFormatterLogger(Client.class);
 
     public Client(SocketAddress serverAddress) {
         this.id = UUID.randomUUID().toString();
