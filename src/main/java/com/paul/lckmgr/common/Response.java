@@ -1,23 +1,29 @@
 package com.paul.lckmgr.common;
 
 /**
- * Created by paul on 5/17/16.
+ * Created by paul on 5/13/16.
  */
 public class Response {
-    private String clientId;
+    private String lockName;
+    private String lockHolder;
     private ResponseStatus responseStatus;
 
-    private enum ResponseStatus {
+    public enum ResponseStatus {
         OK, FAIL
     }
 
-    public Response(String clientId, ResponseStatus responseStatus) {
-        this.clientId = clientId;
+    public Response(String lockName, String lockHolder, ResponseStatus responseStatus) {
+        this.lockName = lockName;
+        this.lockHolder = lockHolder;
         this.responseStatus = responseStatus;
     }
 
-    public String getClientId() {
-        return clientId;
+    public String getLockName() {
+        return lockName;
+    }
+
+    public String getLockHolder() {
+        return lockHolder;
     }
 
     public ResponseStatus getResponseStatus() {

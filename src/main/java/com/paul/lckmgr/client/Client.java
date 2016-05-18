@@ -9,6 +9,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -40,6 +42,8 @@ public class Client {
      * The server address to connect
      */
     private SocketAddress serverAddress;
+
+    private static final Logger _logger = LogManager.getLogger(Client.class);
 
     public Client(SocketAddress serverAddress) {
         this.id = UUID.randomUUID().toString();
@@ -76,15 +80,19 @@ public class Client {
 
             List<Future<Void>> futures = new ArrayList<>(clientNumbers);
 
+            _logger.info("Client starts sending request to server.");
+
             for (int i = 0; i < clientNumbers; i++) {
                 futures.add(service.submit(new Callable<Void>() {
                     public Void call() throws Exception {
                         sendTrylockRequest("lock");
+                        _logger.info(String.format("Client sends request, the request id is: [%s]", id + Thread.currentThread().getId()));
                         try {
                             TimeUnit.MILLISECONDS.sleep(500);
                         }
                         finally {
                             sendUnLockRequest("lock");
+                            _logger.info(String.format("Client sends request, the request id is: [%s]", id + Thread.currentThread().getId()));
                         }
                         return null;
                     }
@@ -119,7 +127,7 @@ public class Client {
             clientGroup = null;
         }
 
-        System.out.println("client stop.");
+        _logger.info("Client stop.");
     }
 
     /**
@@ -127,7 +135,7 @@ public class Client {
      * @param lockName
      */
     public void sendLockRequest(String lockName) {
-        _sendRequest(new Request(id, lockName, Request.RequestType.LOCK));
+        _sendRequest(new Request(lockName, id + Thread.currentThread().getId(), Request.RequestType.LOCK));
     }
 
     /**
@@ -135,7 +143,7 @@ public class Client {
      * @param lockName
      */
     public void sendTrylockRequest(String lockName) {
-        _sendRequest(new Request(id + Thread.currentThread().getId(), lockName, Request.RequestType.TRYLOCK));
+        _sendRequest(new Request(lockName, id + Thread.currentThread().getId(), Request.RequestType.TRYLOCK));
     }
 
     /**
@@ -143,7 +151,7 @@ public class Client {
      * @param lockName
      */
     public void sendUnLockRequest(String lockName) {
-        _sendRequest(new Request(id + Thread.currentThread().getId(), lockName, Request.RequestType.UNLOCK));
+        _sendRequest(new Request(lockName, id + Thread.currentThread().getId(), Request.RequestType.UNLOCK));
     }
 
     /**
@@ -156,19 +164,14 @@ public class Client {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    System.out.println("Client operation success.");
+                    _logger.info("Client sends request success.");
                 } else {
-                    System.out.println("Client operation failed.");
+                    _logger.warn("Client sends request failed.");
                 }
             }
         });
     }
 
-    /**
-     * The input of client
-     * @param args
-     * @throws Exception
-     */
     public static void main(String[] args) throws Exception {
         Client client = new Client(new InetSocketAddress(InetAddress.getLocalHost(), 8088));
         try {

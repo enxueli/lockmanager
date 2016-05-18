@@ -8,6 +8,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -39,6 +41,8 @@ public class Server {
      */
     private SocketAddress socketAddress;
 
+    private static final Logger _logger = LogManager.getLogger(Server.class);
+
     public Server(SocketAddress socketAddress) throws Exception {
         this.socketAddress = socketAddress;
     }
@@ -66,7 +70,7 @@ public class Server {
 
         channelFuture = bootstrap.bind(socketAddress).syncUninterruptibly();
         if(channelFuture.isSuccess()){
-            System.out.println("server start.");
+            _logger.info("Server start.");
         }
     }
 
@@ -89,14 +93,9 @@ public class Server {
             ioHandleThreads = null;
         }
 
-        System.out.println("server stop.");
+        _logger.info("Server stop.");
     }
 
-    /**
-     * The input of the application
-     * @param args
-     * @throws Exception
-     */
     public static void main(String[] args) throws Exception {
         Server server = new Server(new InetSocketAddress(InetAddress.getLocalHost(), 8088));
         try {
